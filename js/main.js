@@ -195,7 +195,7 @@
     if (game.justSaved) { game.justSaved = false; SFX.suck(); }
     if (game.hopCount > prevHopCount) { SFX.hop(); prevHopCount = game.hopCount; }
     var s = game.getState();
-    if (s.dead > prevDead) { SFX.splat(); prevDead = s.dead; }
+    if (s.dead > prevDead) { SFX.eek(); prevDead = s.dead; }
 
     if (status !== prevStatus) {
       // The engine finishes the twirl / splat animation before committing the

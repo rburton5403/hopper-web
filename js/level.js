@@ -50,67 +50,61 @@
   });
 
   // ------------------------------------------------------------------ Level 2
-  // Two portals, two point values. Bridging the fire to the 1-pt portal is
-  // enough here (target 3) — a gentle intro to scoring and the high portal.
+  // Teaches the SPRING. A cliff, then a high ledge with the portal — too high to
+  // hop to. Drop a spring on the floor and the hoppers arc up onto the ledge.
   var LEVEL2 = withPhys({
-    name: 'Two Ways Home',
-    subtitle: 'Portals are worth different points. Reach a score of 3.',
-    width: W, height: H, background: 'background',
+    name: 'Spring Up',
+    subtitle: 'That ledge is too high to hop. Use a spring to bounce up to it. Reach 3.',
+    width: W, height: H, background: 'background', wind: 1,
     blocks: [
-      { x: 0,   y: 470, w: 360, h: 70, tex: 'grass' },
-      { x: 560, y: 470, w: 400, h: 70, tex: 'grass' },
+      { x: 0,   y: 470, w: 430, h: 70, tex: 'grass' },   // starting floor (ends in a cliff)
+      { x: 470, y: 340, w: 490, h: 20, tex: 'grass' },   // high ledge with the portal
     ],
-    spikes: [ { x: 872, y: 438 }, { x: 890, y: 438 }, { x: 908, y: 438 }, { x: 926, y: 438 } ],
-    fires: [ { x: 372, y: 508 }, { x: 420, y: 508 }, { x: 468, y: 508 }, { x: 516, y: 508 } ],
-    spawns: [ { x: 70, y: 425, dir: 1, count: 4, interval: 1.5, startDelay: 1.5 } ],
-    // A: right floor (1 pt). B: floating high, reached by springing up off the right floor.
-    portals: [ { x: 720, y: 402, points: 1 }, { x: 780, y: 258, points: 2 } ],
+    spikes: [],
+    fires: fireRow(430, 960, 512),                        // fire fills the pit under the ledge
+    spawns: [ { x: 60, y: 425, dir: 1, count: 4, interval: 1.6, startDelay: 1.2 } ],
+    portals: [ { x: 680, y: 316, points: 1 } ],
     targetScore: 3,
-    inventory: { plank: 4, barrier: 2, spring: 1 },
+    inventory: { spring: 3 },
     edgesFlip: true,
   });
 
   // ------------------------------------------------------------------ Level 3
-  // First "must combine tools" level: the 1-pt portal alone can't hit the
-  // target, so you must ALSO bridge to the spring and bounce hoppers up to the
-  // 2-pt portal. Plank + Spring required. 8 hoppers, target 10.
+  // Teaches the BARRIER. The hoppers march right toward the fire, but the only
+  // portal is behind them on the left. Turn them around!
   var LEVEL3 = withPhys({
-    name: 'The Long Haul',
-    subtitle: 'One portal isn\'t enough — bridge across, then spring (or balloon) them up. Reach 10.',
-    width: W, height: H, background: 'background',
-    wind: 1,
+    name: 'About Turn',
+    subtitle: 'The portal is behind them and there\'s fire ahead — bounce them back. Reach 3.',
+    width: W, height: H, background: 'background', wind: -1,
     blocks: [
-      { x: 0,   y: 470, w: 320, h: 70, tex: 'grass' },   // left floor
-      { x: 560, y: 470, w: 400, h: 70, tex: 'grass' },   // right floor
+      { x: 0, y: 470, w: 780, h: 70, tex: 'grass' },
     ],
     spikes: [],
-    fires: fireRow(324, 556, 508),
-    spawns: [ { x: 60, y: 425, dir: 1, count: 8, interval: 1.5, startDelay: 1.2 } ],
-    // A: far right floor (1 pt, insufficient alone); B: floating high (2 pt), reached by spring or balloon.
-    portals: [ { x: 872, y: 402, points: 1 }, { x: 720, y: 250, points: 2 } ],
-    targetScore: 10,
-    inventory: { plank: 6, spring: 2, barrier: 2, balloon: 2 },
+    fires: fireRow(780, 960, 508),                        // deadly right end
+    spawns: [ { x: 470, y: 425, dir: 1, count: 4, interval: 1.5, startDelay: 1.2 } ],
+    portals: [ { x: 40, y: 402, points: 1 } ],            // only portal — far left, behind the spawn
+    targetScore: 3,
+    inventory: { barrier: 3 },
     edgesFlip: true,
   });
 
   // ------------------------------------------------------------------ Level 4
-  // Wider canyon, 10 hoppers. Same combo, higher bar: target 14 (needs 7 up
-  // the 2-pt portal). Plank + Spring.
+  // Teaches the BALLOON + WIND. The portal is high up and off to the side; a
+  // balloon lifts a hopper and the wind carries it across onto the ledge.
   var LEVEL4 = withPhys({
-    name: 'Crowd Control',
-    subtitle: 'A broader canyon and a bigger crowd. Reach a score of 14.',
-    width: W, height: H, background: 'background',
-    wind: 1,
+    name: 'Up and Away',
+    subtitle: 'Catch the wind! A balloon floats one hopper up, drifting to the ledge. Reach 3.',
+    width: W, height: H, background: 'background', wind: 1,
     blocks: [
-      { x: 0,   y: 470, w: 260, h: 70, tex: 'grass' },
-      { x: 640, y: 470, w: 320, h: 70, tex: 'grass' },
+      { x: 0,   y: 470, w: 960, h: 70, tex: 'grass' },   // floor
+      { x: 560, y: 250, w: 400, h: 20, tex: 'grass' },   // high-right ledge with the portal
     ],
     spikes: [],
-    fires: fireRow(264, 636, 508),
-    spawns: [ { x: 40, y: 425, dir: 1, count: 10, interval: 1.4, startDelay: 1.2 } ],
-    portals: [ { x: 900, y: 402, points: 1 }, { x: 800, y: 250, points: 2 } ],
-    targetScore: 14,
-    inventory: { plank: 7, spring: 2, barrier: 2, balloon: 2 },
+    fires: [],
+    spawns: [ { x: 120, y: 425, dir: 1, count: 5, interval: 1.7, startDelay: 1.2 } ],
+    portals: [ { x: 640, y: 226, points: 1 } ],
+    targetScore: 3,
+    inventory: { balloon: 6 },
     edgesFlip: true,
   });
 

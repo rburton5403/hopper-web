@@ -58,7 +58,26 @@
     src.start(t); src.stop(t + dur);
   }
 
-  // Hopper dies: a short dull splat.
+  // Hopper dies: a little cartoon "eek!" squeak.
+  function eek() {
+    if (!enabled || !ensure()) return;
+    var t = ctx.currentTime, dur = 0.17;
+    var osc = ctx.createOscillator(); osc.type = 'triangle';
+    osc.frequency.setValueAtTime(720, t);                       // "ee-
+    osc.frequency.exponentialRampToValueAtTime(1550, t + 0.05); //  eek!"
+    osc.frequency.exponentialRampToValueAtTime(560, t + dur);
+    var lfo = ctx.createOscillator(), lg = ctx.createGain();    // warble
+    lfo.frequency.setValueAtTime(38, t); lg.gain.value = 70;
+    lfo.connect(lg); lg.connect(osc.frequency);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.0008, t);
+    g.gain.exponentialRampToValueAtTime(0.22, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    osc.connect(g); g.connect(master);
+    osc.start(t); lfo.start(t); osc.stop(t + dur); lfo.stop(t + dur);
+  }
+
+  // Hopper dies (unused fallback): a short dull splat.
   function splat() {
     if (!enabled || !ensure()) return;
     var t = ctx.currentTime, dur = 0.18;
@@ -98,5 +117,5 @@
 
   function setEnabled(v) { enabled = v; }
 
-  root.HopperSFX = { resume: resume, suck: suck, splat: splat, place: place, hop: hop, setEnabled: setEnabled };
+  root.HopperSFX = { resume: resume, suck: suck, splat: splat, eek: eek, place: place, hop: hop, setEnabled: setEnabled };
 })(typeof self !== 'undefined' ? self : this);
