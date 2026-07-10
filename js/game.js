@@ -400,7 +400,12 @@
     }
     if (active === 0 || moved) this.stallT = 0;
     else this.stallT += 0.4;
-    if (this.stallT >= 5) { this.pending = 'lost'; this.outroT = 0; } // deadlocked
+    if (this.stallT >= 5) {
+      // Deadlocked: the stragglers aren't going anywhere. If the target is
+      // already met, that's a win; otherwise a loss.
+      if (this.score >= this.targetScore) this.pending = 'won';
+      else { this.pending = 'lost'; this.outroT = 0; }
+    }
   };
 
   Game.prototype._anyTwirling = function () {
@@ -419,10 +424,17 @@
       if (this.outroT <= 0 && !this._anyTwirling()) this.status = 'lost';
       return;
     }
-    // Decide the outcome (score-based).
-    if (this.score >= this.targetScore) { this.pending = 'won'; return; }
-    // Best case, can the remaining hoppers still reach the target?
+    // Decide the outcome (score-based). We DON'T end the instant the target is
+    // hit — let every hopper finish its run first, so late hoppers still count
+    // (you can beat the target) and the level doesn't cut off mid-stream.
     var remaining = this.totalToSpawn - this.saved - this.dead;
+    var allDone = this._allSpawned() && remaining <= 0;
+    if (allDone) {
+      if (this.score >= this.targetScore) this.pending = 'won';
+      else { this.pending = 'lost'; this.outroT = 0.9; }
+      return;
+    }
+    // Give up early only when the target is already out of reach.
     if (this.score + remaining * this.maxPortalPoints < this.targetScore) {
       this.pending = 'lost'; this.outroT = 0.9;
     }
@@ -443,6 +455,7 @@
       portalAngle: this.portalAngle, fireTime: this.fireTime,
       inv: this.inv, saved: this.saved, dead: this.dead,
       score: this.score, targetScore: this.targetScore,
+      clinched: this.score >= this.targetScore,
       portalPoints: this.portalPoints, total: this.totalToSpawn,
     };
   };

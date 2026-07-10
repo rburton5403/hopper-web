@@ -106,9 +106,11 @@
       }
     });
     if (s.status === 'playing') {
-      els.hint.textContent = selectedTool
-        ? 'Place a ' + TOOL_META[selectedTool].label.toLowerCase() + ' — left-click to drop, right-click to undo.'
-        : 'Guide the hoppers to a portal!';
+      els.hint.textContent = s.clinched
+        ? '⭐ Target reached — bringing the rest home for bonus points!'
+        : (selectedTool
+          ? 'Place a ' + TOOL_META[selectedTool].label.toLowerCase() + ' — left-click to drop, right-click to undo.'
+          : 'Guide the hoppers to a portal!');
     }
     els.pause.textContent = game.paused ? 'Resume' : 'Pause';
   }
