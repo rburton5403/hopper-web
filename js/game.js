@@ -24,6 +24,7 @@
     plank:   { w: 72, h: 14, kind: 'ground' },
     barrier: { w: 16, h: 76, kind: 'wall' },
     spring:  { w: 46, h: 16, kind: 'spring' },
+    balloon: { w: 34, h: 42, kind: 'balloon' }, // one-shot buoyant lift (consumed on touch)
   };
 
   function Game(planck, level) {
@@ -58,6 +59,8 @@
     this.required = level.required;
     this.saved = 0;
     this.dead = 0;
+    this.pending = null;   // 'won' | 'lost' once decided; status commits after the outro
+    this.outroT = 0;       // lose outro timer (lets the splat play)
 
     this._buildStatics();
 
@@ -156,13 +159,14 @@
     if (!this.canPlace(type)) return false;
     var t = TOOLS[type], pl = this.pl;
     var body = this.world.createBody();
-    var restitution = t.kind === 'spring' ? 0.1 : 0.1;
+    var item = { type: type, x: cx - t.w / 2, y: cy - t.h / 2, w: t.w, h: t.h, body: body };
+    var tag = t.kind === 'wall' ? 'wall' : t.kind === 'spring' ? 'spring'
+      : t.kind === 'balloon' ? 'balloon' : 'ground';
     var fix = body.createFixture(
       pl.Box(px2m(t.w) / 2, px2m(t.h) / 2, pl.Vec2(px2m(cx), px2m(cy))),
-      { friction: 0.95, restitution: restitution });
-    // Walls flip; springs & planks are solid ground (spring adds a launch).
-    fix.setUserData({ type: t.kind === 'wall' ? 'wall' : (t.kind === 'spring' ? 'spring' : 'ground') });
-    this.items.push({ type: type, x: cx - t.w / 2, y: cy - t.h / 2, w: t.w, h: t.h, body: body });
+      { friction: 0.95, restitution: 0.1, isSensor: t.kind === 'balloon' });
+    fix.setUserData({ type: tag, itemRef: item });
+    this.items.push(item);
     this.inv[type]--;
     return true;
   };
@@ -192,6 +196,7 @@
     else if (other.type === 'portal') this.events.push({ k: 'save', h: h, portal: other.index });
     else if (other.type === 'wall') this.events.push({ k: 'flip', h: h });
     else if (other.type === 'spring') this.events.push({ k: 'spring', h: h });
+    else if (other.type === 'balloon') this.events.push({ k: 'balloon', h: h, item: other.itemRef });
   };
 
   Game.prototype._drain = function () {
@@ -202,8 +207,20 @@
       else if (e.k === 'save') this._save(h, e.portal);
       else if (e.k === 'flip') this._flip(h);
       else if (e.k === 'spring') this._spring(h);
+      else if (e.k === 'balloon') this._balloon(h, e.item);
     }
     this.events.length = 0;
+  };
+
+  Game.prototype._balloon = function (h, item) {
+    if (!item || item.used) return;
+    item.used = true;                    // consume the balloon (one lift each)
+    this.world.destroyBody(item.body);
+    var idx = this.items.indexOf(item);
+    if (idx >= 0) this.items.splice(idx, 1);
+    h.floatT = 1.0;                      // seconds of buoyancy
+    var v = h.body.getLinearVelocity();
+    if (v.y > 0) h.body.setLinearVelocity(this.pl.Vec2(v.x, 0)); // cancel any drop
   };
 
   Game.prototype._die = function (h) {
@@ -257,8 +274,8 @@
     this.fireTime += dt;
     this.portalAngle += dt * (Math.PI / 2);
 
-    // Spawning.
-    this.spawns.forEach(function (s) {
+    // Spawning (stop once the result is decided so no new hoppers appear mid-outro).
+    if (!this.pending) this.spawns.forEach(function (s) {
       if (s.emitted >= s.def.count) return;
       s.timer += dt;
       var interval = s.def.interval || 1.2;
@@ -273,6 +290,15 @@
     this.hoppers.forEach(function (h) {
       if (!h.alive || h.exiting) return;
       if (h.flipCd > 0) h.flipCd -= dt;
+      // Balloon buoyancy: gentle negative gravity, and no hopping while it
+      // lasts, so the lift is a controlled float (~one ledge high) rather than
+      // a runaway as hop impulses compound.
+      if (h.floatT > 0) {
+        h.floatT -= dt;
+        h.body.setGravityScale(h.floatT > 0 ? -0.28 : 1);
+        h.hopTimer = this.level.hopInterval - 0.3; // resume hopping shortly after landing
+        return;
+      }
       h.hopTimer += dt;
       if (h.hopTimer >= this.level.hopInterval) { h.hopTimer -= this.level.hopInterval; this._hop(h); }
     }, this);
@@ -289,18 +315,34 @@
       }
     }, this);
 
-    this._checkEnd();
+    this._checkEnd(dt);
     return this.status;
   };
 
-  Game.prototype._checkEnd = function () {
-    if (this.saved >= this.required) { this.status = 'won'; return; }
+  Game.prototype._anyTwirling = function () {
+    return this.hoppers.some(function (h) { return h.exiting && h.exitT < 1; });
+  };
+
+  Game.prototype._checkEnd = function (dt) {
+    // Once a result is pending, keep simulating until its animation finishes,
+    // THEN commit the status (so the world doesn't freeze mid-twirl / mid-splat).
+    if (this.pending === 'won') {
+      if (!this._anyTwirling()) this.status = 'won';
+      return;
+    }
+    if (this.pending === 'lost') {
+      this.outroT -= dt;
+      if (this.outroT <= 0 && !this._anyTwirling()) this.status = 'lost';
+      return;
+    }
+    // Decide the outcome.
+    if (this.saved >= this.required) { this.pending = 'won'; return; }
     // Can we still possibly reach the target?
-    if (this.totalToSpawn - this.dead < this.required) { this.status = 'lost'; return; }
+    if (this.totalToSpawn - this.dead < this.required) { this.pending = 'lost'; this.outroT = 0.9; return; }
     // All hoppers accounted for but target not met.
     var allSpawned = this.spawns.every(function (s) { return s.emitted >= s.def.count; });
     if (allSpawned && (this.saved + this.dead) >= this.totalToSpawn && this.saved < this.required) {
-      this.status = 'lost';
+      this.pending = 'lost'; this.outroT = 0.9;
     }
   };
 

@@ -63,5 +63,72 @@
     edgesFlip: true,
   });
 
-  return { LEVELS: [LEVEL1, LEVEL2] };
+  // ------------------------------------------------------------------ Level 3
+  // The crowd grows: 8 hoppers pour out over a wide fire canyon. Lay a plank
+  // walkway across to the portal. Save 6 of 8.
+  var LEVEL3 = withPhys({
+    name: 'The Long Haul',
+    subtitle: 'A whole crowd of hoppers over a wide fire canyon. Save 6 of 8.',
+    width: W, height: H, background: 'background',
+    blocks: [
+      { x: 0,   y: 470, w: 300, h: 70, tex: 'grass' },   // left floor
+      { x: 660, y: 470, w: 300, h: 70, tex: 'grass' },   // right floor
+      { x: 380, y: 300, w: 180, h: 20, tex: 'grass' },   // high ledge (portal B)
+    ],
+    spikes: [ { x: 904, y: 438 }, { x: 922, y: 438 }, { x: 940, y: 438 } ],
+    fires: [
+      { x: 312, y: 508 }, { x: 360, y: 508 }, { x: 408, y: 508 }, { x: 456, y: 508 },
+      { x: 504, y: 508 }, { x: 552, y: 508 }, { x: 600, y: 508 },
+    ],
+    spawns: [ { x: 60, y: 425, dir: 1, count: 8, interval: 1.2, startDelay: 1.2 } ],
+    portals: [ { x: 740, y: 402 }, { x: 446, y: 232 } ],  // A: right floor, B: high ledge
+    required: 6,
+    inventory: { plank: 6, barrier: 2, spring: 1 },
+    edgesFlip: true,
+  });
+
+  // Build a row of fire cells spanning [x0,x1) at the given top y.
+  function fireRow(x0, x1, y) { var a = []; for (var x = x0; x < x1; x += 48) a.push({ x: x, y: y }); return a; }
+
+  // ------------------------------------------------------------------ Level 4
+  // Crowd control: 10 hoppers over a broad canyon, with a high alternate portal.
+  var LEVEL4 = withPhys({
+    name: 'Crowd Control',
+    subtitle: '10 hoppers, a broad fire canyon, two ways home. Save 7.',
+    width: W, height: H, background: 'background',
+    blocks: [
+      { x: 0,   y: 470, w: 240, h: 70, tex: 'grass' },
+      { x: 720, y: 470, w: 240, h: 70, tex: 'grass' },
+      { x: 520, y: 290, w: 160, h: 20, tex: 'grass' },   // high ledge (portal B)
+    ],
+    spikes: [],
+    fires: fireRow(252, 708, 508),
+    spawns: [ { x: 40, y: 425, dir: 1, count: 10, interval: 1.0, startDelay: 1.2 } ],
+    portals: [ { x: 800, y: 402 }, { x: 576, y: 222 } ],
+    required: 7,
+    inventory: { plank: 8, barrier: 2, spring: 1, balloon: 2 },
+    edgesFlip: true,
+  });
+
+  // ------------------------------------------------------------------ Level 5
+  // The gauntlet: 14 hoppers over the widest canyon yet. Save 10.
+  var LEVEL5 = withPhys({
+    name: 'The Gauntlet',
+    subtitle: 'The widest canyon yet — 14 hoppers pouring out. Save 10.',
+    width: W, height: H, background: 'background',
+    blocks: [
+      { x: 0,   y: 470, w: 200, h: 70, tex: 'grass' },
+      { x: 760, y: 470, w: 200, h: 70, tex: 'grass' },
+      { x: 410, y: 280, w: 160, h: 20, tex: 'grass' },   // high ledge (portal B)
+    ],
+    spikes: [ { x: 900, y: 438 }, { x: 918, y: 438 }, { x: 936, y: 438 } ],
+    fires: fireRow(212, 748, 508),
+    spawns: [ { x: 36, y: 425, dir: 1, count: 14, interval: 0.9, startDelay: 1.2 } ],
+    portals: [ { x: 840, y: 402 }, { x: 466, y: 212 } ],
+    required: 10,
+    inventory: { plank: 9, barrier: 3, spring: 1, balloon: 2 },
+    edgesFlip: true,
+  });
+
+  return { LEVELS: [LEVEL1, LEVEL2, LEVEL3, LEVEL4, LEVEL5] };
 });

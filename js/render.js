@@ -87,6 +87,19 @@
     if (it.type === 'plank') this._plank(it.x, it.y, it.w, it.h, valid);
     else if (it.type === 'barrier') this._barrier(it.x, it.y, it.w, it.h, valid);
     else if (it.type === 'spring') this._spring(it.x, it.y, it.w, it.h, valid);
+    else if (it.type === 'balloon') this._balloon(it.x, it.y, it.w, it.h, valid);
+  };
+
+  Renderer.prototype._balloon = function (x, y, w, h, valid) {
+    var ctx = this.ctx, cx = x + w / 2, rx = w / 2, ry = (h - 8) / 2, cy = y + ry;
+    ctx.strokeStyle = 'rgba(90,60,30,.7)'; ctx.lineWidth = 1.5; // string
+    ctx.beginPath(); ctx.moveTo(cx, cy + ry); ctx.lineTo(cx, y + h); ctx.stroke();
+    ctx.fillStyle = valid === false ? '#c62828' : '#e0466e';
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = valid === false ? '#8e1f1f' : '#b02a54'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,.45)'; // highlight
+    ctx.beginPath(); ctx.ellipse(cx - rx * 0.3, cy - ry * 0.35, rx * 0.25, ry * 0.3, 0, 0, Math.PI * 2); ctx.fill();
   };
 
   Renderer.prototype._plank = function (x, y, w, h, valid) {

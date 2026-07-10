@@ -14,12 +14,15 @@ fire. You place tools **in real time** to build them a safe path to the portal.
 - Pick a tool from the tray (or press **1** / **2** / **3**).
 - **Left-click** the board to place it; **right-click** to undo the last one.
 - **Plank** — a bridge to hop across. **Barrier** — bounces hoppers back the
-  other way. **Spring** — launches them high.
+  other way. **Spring** — launches them straight up. **Balloon** — floats the
+  next hopper that touches it up to a higher ledge (used once).
 - Get enough hoppers into a spinning **portal** to win; they spin, shrink and
   twirl in as they're sucked home. **Space** pauses, **R** restarts.
 
-Two levels: **The Spike Pit** (a one-plank teacher) and **Two Ways Home**
-(four hoppers, two portals, fire, and the full toolset).
+Five levels so far, growing toward ten — progressively more hoppers and a
+higher minimum to clear: *The Spike Pit* (1) → *Two Ways Home* (4, save 3) →
+*The Long Haul* (8, save 6) → *Crowd Control* (10, save 7) → *The Gauntlet*
+(14, save 10).
 
 ## How it's built
 
@@ -39,9 +42,9 @@ Because `game.js` and `level.js` have no DOM dependencies, the mechanics are
 verified headlessly in Node (load planck with `global.window = global` first):
 
 ```bash
-node test/sim2.js    # Level 1 is winnable (and loses with no plank)
-node test/sim3.js    # Level 2 is winnable; searches plank-bridge solutions
-node test/tools.js   # barrier flips hopper direction; spring launches it high
+node test/sim_all.js  # every level is winnable (with a plank bridge); balloon lifts
+node test/tools.js    # barrier flips hopper direction; spring launches it high
+node test/outro.js    # a cleared level waits for the twirl before declaring the win
 ```
 
 **Key physics gotcha:** `hopInterval` must exceed the hop airtime

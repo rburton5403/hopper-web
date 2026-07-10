@@ -11,10 +11,16 @@
     background: 'assets/background.png', grass: 'assets/grass.png', dirt: 'assets/dirt.png',
     hopper: 'assets/hopper.png', spike: 'assets/spike.png', portal: 'assets/portal.png',
   };
+  // Small inline SVG icons for tools without a bespoke sprite (self-contained).
+  var svg = function (s) { return 'data:image/svg+xml;utf8,' + encodeURIComponent(s); };
+  var ICON_SPRING = svg('<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><rect x="4" y="24" width="22" height="4" rx="2" fill="#1f6b6b"/><path d="M6 23 L24 20 L6 16 L24 13 L6 9" stroke="#3aa0a0" stroke-width="3" fill="none"/><rect x="6" y="5" width="18" height="4" rx="2" fill="#3aa0a0"/></svg>');
+  var ICON_BALLOON = svg('<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><ellipse cx="15" cy="12" rx="9" ry="11" fill="#e0466e" stroke="#b02a54" stroke-width="2"/><path d="M15 23 L15 29" stroke="#7a4a2a" stroke-width="1.5"/><ellipse cx="12" cy="8" rx="2.2" ry="3" fill="#ffffff" opacity="0.5"/></svg>');
+  var ICON_BARRIER = svg('<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30"><rect x="12" y="3" width="6" height="24" rx="2" fill="#7d8a99" stroke="#4a545e" stroke-width="1.5"/><path d="M15 8 l-4 3 4 3 M15 8 l4 3 -4 3 M15 16 l-4 3 4 3 M15 16 l4 3 -4 3" stroke="#ffd166" stroke-width="1.6" fill="none"/></svg>');
   var TOOL_META = {
     plank:   { label: 'Plank',   icon: 'assets/planks.png', desc: 'A bridge to hop across.' },
-    barrier: { label: 'Barrier', icon: 'assets/rope.png',   desc: 'Bounces hoppers the other way.' },
-    spring:  { label: 'Spring',  icon: 'assets/planks.png', desc: 'Launches hoppers high.' },
+    barrier: { label: 'Barrier', icon: ICON_BARRIER, desc: 'Bounces hoppers the other way.' },
+    spring:  { label: 'Spring',  icon: ICON_SPRING,  desc: 'Launches hoppers straight up.' },
+    balloon: { label: 'Balloon', icon: ICON_BALLOON, desc: 'Floats the next hopper up (used once).' },
   };
 
   var canvas = document.getElementById('game');
@@ -187,8 +193,10 @@
     if (s.dead > prevDead) { SFX.splat(); prevDead = s.dead; }
 
     if (status !== prevStatus) {
+      // The engine finishes the twirl / splat animation before committing the
+      // result, so it's safe to show the overlay as soon as the status flips.
       if (status === 'won') showOverlay(true);
-      else if (status === 'lost') setTimeout(function () { if (game.status === 'lost') showOverlay(false); }, 800);
+      else if (status === 'lost') showOverlay(false);
       prevStatus = status; updateHud();
     } else if (status === 'playing') {
       updateHud();
