@@ -141,6 +141,20 @@
     return hopper;
   };
 
+  // A hopper is "resting" if it's touching a solid surface and not moving
+  // vertically — i.e. sitting still, ready to launch a fresh hop.
+  Game.prototype._isResting = function (h) {
+    var v = h.body.getLinearVelocity();
+    if (Math.abs(v.y) > px2m(45)) return false; // rising/falling => airborne
+    for (var ce = h.body.getContactList(); ce; ce = ce.next) {
+      var c = ce.contact;
+      if (!c.isTouching()) continue;
+      if (c.getFixtureA().isSensor() || c.getFixtureB().isSensor()) continue; // ignore portal/balloon
+      return true;
+    }
+    return false;
+  };
+
   Game.prototype._hop = function (h) {
     var body = h.body, level = this.level, m = body.getMass();
     body.setLinearVelocity(this.pl.Vec2(0, 0));
@@ -300,7 +314,13 @@
         return;
       }
       h.hopTimer += dt;
-      if (h.hopTimer >= this.level.hopInterval) { h.hopTimer -= this.level.hopInterval; this._hop(h); }
+      if (h.hopTimer >= this.level.hopInterval) {
+        // Only hop when actually resting on a surface — never off thin air (e.g.
+        // mid-flight after a spring bounce). If airborne, hold the hop and take
+        // it the instant the hopper lands.
+        if (this._isResting(h)) { h.hopTimer -= this.level.hopInterval; this._hop(h); }
+        else { h.hopTimer = this.level.hopInterval; }
+      }
     }, this);
 
     this.world.step(dt);
