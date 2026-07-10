@@ -2,20 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Hopper</title>
-  <meta name="description" content="Hopper — a physics puzzle. Drop planks to guide the hopper across the spike pit to the portal." />
+  <meta name="description" content="Hopper — a real-time Lemmings-style puzzle. Place planks, barriers and springs to guide the hopping creatures home." />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
   <main class="wrap">
     <header class="topbar">
       <h1>Hopper</h1>
-      <p class="tag">Guide the hopper home</p>
+      <div class="levelrow">
+        <span id="levelName" class="levelName">1. The Spike Pit</span>
+        <span id="levelSel" class="levelSel"></span>
+      </div>
     </header>
 
     <div class="stage">
-      <canvas id="game" aria-label="Hopper game board"></canvas>
+      <canvas id="game" width="960" height="540" aria-label="Hopper game board"></canvas>
       <div id="overlay" class="overlay">
         <div class="panel">
           <p id="overlayText"></p>
@@ -25,33 +28,40 @@
     </div>
 
     <div class="hud">
-      <div class="inventory" title="Planks remaining">
-        <img src="assets/planks.png" alt="Planks" class="ico" />
-        <span id="planksLeft">3</span>
+      <div class="stats">
+        <span class="stat home">🏠 <b id="saved">0</b>/<span id="required">1</span></span>
+        <span class="stat">Hoppers <b id="out">1</b></span>
+        <span class="stat dead">💀 <b id="dead">0</b></span>
       </div>
+      <div id="palette" class="palette"></div>
       <div class="controls">
-        <button id="undo" class="btn">Undo</button>
-        <button id="reset" class="btn">Reset</button>
-        <button id="go" class="btn primary">Go ▶</button>
+        <button id="mute" class="btn icon" title="Sound">🔊</button>
+        <button id="pause" class="btn">Pause</button>
+        <button id="restart" class="btn">Restart</button>
       </div>
     </div>
 
-    <p id="hint" class="hint">Click in the pit to drop a plank, then press Go.</p>
+    <p id="hint" class="hint"></p>
 
     <details class="how">
       <summary>How to play</summary>
-      <p>The hopper hops on its own — up and to the right, again and again. It can't
-      change direction, so it needs a path. <strong>Left-click</strong> in the pit to
-      drop a plank as a stepping stone (<strong>right-click</strong> or <strong>Undo</strong>
-      to remove the last one). When your bridge looks right, press <strong>Go</strong>.
-      Reach the spinning portal to win; touch a spike or fall in the pit and it's back to the
-      drawing board.</p>
+      <p>Hoppers spawn and hop on their own — and they never stop. They hop in the
+      direction they're facing and can't steer, so they'll cheerfully hop off a
+      cliff into the fire. Your job is to build them a safe path <em>in real time</em>.</p>
+      <ul>
+        <li><b>Pick a tool</b> from the tray (or press <b>1</b>/<b>2</b>/<b>3</b>).</li>
+        <li><b>Left-click</b> the board to place it; <b>right-click</b> to undo the last one.</li>
+        <li><b>Plank</b> = a bridge. <b>Barrier</b> = bounces hoppers back the other way.
+            <b>Spring</b> = launches them high.</li>
+        <li>Get enough hoppers into a spinning <b>portal</b> to win. <b>Space</b> pauses, <b>R</b> restarts.</li>
+      </ul>
       <p class="credit">A web remake of <em>Hopper</em> (Gargle Games, 2013). Physics by
       <a href="https://github.com/piqnt/planck.js" target="_blank" rel="noopener">planck.js</a>.</p>
     </details>
   </main>
 
   <script src="js/planck.min.js"></script>
+  <script src="js/sound.js"></script>
   <script src="js/level.js"></script>
   <script src="js/game.js"></script>
   <script src="js/render.js"></script>

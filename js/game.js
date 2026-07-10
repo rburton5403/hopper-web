@@ -1,6 +1,7 @@
-// Core Hopper game logic: physics, hopping, collisions, win/lose.
+// Core Hopper game logic: real-time, Lemmings-style. Hoppers spawn and hop
+// continuously; the player places tools live to steer them to portals.
 // Deliberately free of any DOM/canvas references so it can run headlessly in
-// node (see test/sim.js) as well as in the browser. Rendering lives in render.js.
+// node (see test/) as well as in the browser. Rendering lives in render.js.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.HopperGame = factory();
@@ -8,15 +9,22 @@
   'use strict';
 
   var PPM = 16; // pixels per meter — 16px grid cell == 1 physics meter
-
   function px2m(v) { return v / PPM; }
 
   // Hopper collision polygon (the original Corona "bottomShape"), in pixels,
-  // relative to the sprite centre. Gives the hopper a rounded, bottom-heavy body.
+  // relative to the sprite centre.
   var HOPPER_SHAPE_PX = [
     [-20.5, 11], [-6, 3], [6, 3], [20.5, 8],
     [20.5, 15], [13, 22.5], [-16, 22.5], [-20.5, 18],
   ];
+  var HOPPER_HALF_W = 20.5;
+
+  // Tool definitions (sizes in px). "kind" drives physics behaviour.
+  var TOOLS = {
+    plank:   { w: 72, h: 14, kind: 'ground' },
+    barrier: { w: 16, h: 76, kind: 'wall' },
+    spring:  { w: 46, h: 16, kind: 'spring' },
+  };
 
   function Game(planck, level) {
     this.pl = planck;
@@ -28,210 +36,293 @@
     var pl = this.pl, level = this.level;
 
     this.world = pl.World(pl.Vec2(0, px2m(level.gravity)));
-    this.status = 'build';   // 'build' -> 'playing' -> 'won' | 'lost'
+    this.status = 'playing';
+    this.paused = false;
     this.time = 0;
-    this.hopTimer = 0;
     this.portalAngle = 0;
-    this.exitT = 0;          // portal-exit animation progress (0..1)
-    this.deathT = 0;         // death animation timer
-    this.planks = [];        // { body, x, y, w, h } in px (top-left based rect)
-    this.planksLeft = level.inventory.planks;
+    this.fireTime = 0;
+
+    this.hoppers = [];
+    this.items = [];        // player-placed tools: { type, x, y, w, h, body }
+    this.events = [];       // queued collision outcomes, drained after each step
+
+    // Inventory (copy so reset restores full counts).
+    this.inv = {};
+    for (var k in level.inventory) this.inv[k] = level.inventory[k];
+
+    // Spawn bookkeeping.
+    this.spawns = level.spawns.map(function (s) {
+      return { def: s, emitted: 0, timer: -(s.startDelay || 0) };
+    });
+    this.totalToSpawn = level.spawns.reduce(function (a, s) { return a + s.count; }, 0);
+    this.required = level.required;
+    this.saved = 0;
+    this.dead = 0;
 
     this._buildStatics();
-    this._spawnHopper();
 
-    // Collision handling.
     var self = this;
-    this.world.on('begin-contact', function (contact) {
-      var a = contact.getFixtureA().getUserData();
-      var b = contact.getFixtureB().getUserData();
-      if (!a || !b) return;
-      var types = [a.type, b.type];
-      if (types.indexOf('hopper') === -1) return;
-      if (types.indexOf('spike') !== -1) self._onDeath();
-      else if (types.indexOf('portal') !== -1) self._onExit();
-    });
+    this.world.on('begin-contact', function (c) { self._onContact(c); });
+  };
+
+  Game.prototype._staticBox = function (x, y, w, h, type, opts) {
+    var pl = this.pl;
+    var body = this.world.createBody();
+    var def = { friction: 0.9, restitution: 0.1 };
+    if (opts) for (var k in opts) def[k] = opts[k];
+    var fix = body.createFixture(
+      pl.Box(px2m(w) / 2, px2m(h) / 2, pl.Vec2(px2m(x + w / 2), px2m(y + h / 2))), def);
+    fix.setUserData({ type: type });
+    return body;
   };
 
   Game.prototype._buildStatics = function () {
-    var pl = this.pl, level = this.level;
+    var pl = this.pl, level = this.level, W = level.width, H = level.height;
 
-    // Blocks (platforms / pit floor) as static boxes.
+    // Blocks: ground (walkable) or wall (flips direction).
     level.blocks.forEach(function (b) {
-      var body = this.world.createBody();
-      var hw = px2m(b.w) / 2, hh = px2m(b.h) / 2;
-      var cx = px2m(b.x + b.w / 2), cy = px2m(b.y + b.h / 2);
-      var fix = body.createFixture(pl.Box(hw, hh, pl.Vec2(cx, cy)), {
-        friction: 0.9, restitution: 0.175,
-      });
-      fix.setUserData({ type: 'block' });
+      this._staticBox(b.x, b.y, b.w, b.h, b.wall ? 'wall' : 'ground', { friction: 0.95 });
     }, this);
 
-    // Spikes as upward-pointing static triangles.
-    level.spikes.forEach(function (s) {
-      var cx = s.x + 8, cy = s.y + 16; // centre of the 16x32 sprite
+    // Spikes: upward-pointing static triangles that kill.
+    (level.spikes || []).forEach(function (s) {
+      var cx = s.x + 8, cy = s.y + 16;
       var verts = [
-        pl.Vec2(px2m(cx + 0), px2m(cy - 16)),   // tip
-        pl.Vec2(px2m(cx - 8), px2m(cy + 16)),   // bottom-left
-        pl.Vec2(px2m(cx + 8), px2m(cy + 16)),   // bottom-right
+        pl.Vec2(px2m(cx), px2m(cy - 16)),
+        pl.Vec2(px2m(cx - 8), px2m(cy + 16)),
+        pl.Vec2(px2m(cx + 8), px2m(cy + 16)),
       ];
       var body = this.world.createBody();
-      var fix = body.createFixture(pl.Polygon(verts), { friction: 0.9 });
-      fix.setUserData({ type: 'spike' });
+      body.createFixture(pl.Polygon(verts), { friction: 0.9 }).setUserData({ type: 'spike' });
     }, this);
 
-    // Portal as a static sensor circle.
-    var p = level.portal;
-    var pcx = p.x + 24, pcy = p.y + 24;
-    var portalBody = this.world.createBody();
-    var pfix = portalBody.createFixture(this.pl.Circle(pl.Vec2(px2m(pcx), px2m(pcy)), px2m(18)), {
-      isSensor: true,
-    });
-    pfix.setUserData({ type: 'portal' });
+    // Fire: 32x32 sensor hazards that kill.
+    (level.fires || []).forEach(function (f) {
+      var body = this.world.createBody();
+      body.createFixture(pl.Box(px2m(28) / 2, px2m(24) / 2, pl.Vec2(px2m(f.x + 16), px2m(f.y + 20))),
+        { isSensor: true }).setUserData({ type: 'fire' });
+    }, this);
+
+    // Portals: static sensor circles that save.
+    level.portals.forEach(function (p, i) {
+      var body = this.world.createBody();
+      body.createFixture(this.pl.Circle(pl.Vec2(px2m(p.x + 24), px2m(p.y + 24)), px2m(22)),
+        { isSensor: true }).setUserData({ type: 'portal', index: i });
+    }, this);
+
+    // Screen-edge walls keep hoppers in play (flip their direction).
+    if (level.edgesFlip !== false) {
+      this._staticBox(-20, -H, 20, H * 3, 'wall');
+      this._staticBox(W, -H, 20, H * 3, 'wall');
+    }
   };
 
-  Game.prototype._spawnHopper = function () {
-    var pl = this.pl, level = this.level;
-    var sx = level.spawn.x + 20.5, sy = level.spawn.y + 22.5; // sprite centre
+  // --- Hoppers --------------------------------------------------------------
 
+  Game.prototype._spawnHopper = function (x, y, dir) {
+    var pl = this.pl;
     var body = this.world.createDynamicBody({
-      position: pl.Vec2(px2m(sx), px2m(sy)),
+      position: pl.Vec2(px2m(x + 20.5), px2m(y + 22.5)),
       fixedRotation: true,
       bullet: true,
     });
-    var verts = HOPPER_SHAPE_PX.map(function (p) {
-      return pl.Vec2(px2m(p[0]), px2m(p[1]));
-    });
-    var fix = body.createFixture(pl.Polygon(verts), {
-      density: 1, friction: 0.9, restitution: 0.2,
-    });
-    fix.setUserData({ type: 'hopper' });
+    var verts = HOPPER_SHAPE_PX.map(function (p) { return pl.Vec2(px2m(p[0]), px2m(p[1])); });
+    var fix = body.createFixture(pl.Polygon(verts), { density: 1, friction: 0.9, restitution: 0.1 });
+    var hopper = {
+      body: body, dir: dir >= 0 ? 1 : -1, alive: true, exiting: false,
+      exitT: 0, hopTimer: this.level.hopInterval - (this.level.firstHopDelay || 0.3),
+      flipCd: 0, id: this.hoppers.length,
+    };
+    fix.setUserData({ type: 'hopper', ref: hopper });
+    this.hoppers.push(hopper);
+    return hopper;
+  };
 
-    this.hopper = { body: body, alive: true, exiting: false };
+  Game.prototype._hop = function (h) {
+    var body = h.body, level = this.level, m = body.getMass();
+    body.setLinearVelocity(this.pl.Vec2(0, 0));
+    body.applyLinearImpulse(
+      this.pl.Vec2(m * px2m(level.hopVelX * h.dir), m * px2m(-level.hopVelY)),
+      body.getWorldCenter(), true);
   };
 
   // --- Player actions -------------------------------------------------------
 
-  // Place a plank centred on (cx, cy) in pixels. Only allowed during build.
-  Game.prototype.addPlank = function (cx, cy) {
-    if (this.status !== 'build' || this.planksLeft <= 0) return false;
-    var pl = this.pl, sz = this.level.plankSize;
+  Game.prototype.canPlace = function (type) {
+    return TOOLS[type] && (this.inv[type] || 0) > 0 && this.status === 'playing';
+  };
+
+  Game.prototype.addItem = function (type, cx, cy) {
+    if (!this.canPlace(type)) return false;
+    var t = TOOLS[type], pl = this.pl;
     var body = this.world.createBody();
+    var restitution = t.kind === 'spring' ? 0.1 : 0.1;
     var fix = body.createFixture(
-      pl.Box(px2m(sz.w) / 2, px2m(sz.h) / 2, pl.Vec2(px2m(cx), px2m(cy))),
-      { friction: 0.95, restitution: 0.1 }
-    );
-    fix.setUserData({ type: 'plank' });
-    this.planks.push({ body: body, x: cx - sz.w / 2, y: cy - sz.h / 2, w: sz.w, h: sz.h });
-    this.planksLeft--;
+      pl.Box(px2m(t.w) / 2, px2m(t.h) / 2, pl.Vec2(px2m(cx), px2m(cy))),
+      { friction: 0.95, restitution: restitution });
+    // Walls flip; springs & planks are solid ground (spring adds a launch).
+    fix.setUserData({ type: t.kind === 'wall' ? 'wall' : (t.kind === 'spring' ? 'spring' : 'ground') });
+    this.items.push({ type: type, x: cx - t.w / 2, y: cy - t.h / 2, w: t.w, h: t.h, body: body });
+    this.inv[type]--;
     return true;
   };
 
-  Game.prototype.removeLastPlank = function () {
-    if (this.status !== 'build' || this.planks.length === 0) return false;
-    var plank = this.planks.pop();
-    this.world.destroyBody(plank.body);
-    this.planksLeft++;
+  Game.prototype.removeLastItem = function () {
+    if (this.items.length === 0) return false;
+    var it = this.items.pop();
+    this.world.destroyBody(it.body);
+    this.inv[it.type]++;
     return true;
   };
 
-  Game.prototype.start = function () {
-    if (this.status !== 'build') return;
-    this.status = 'playing';
-    // Seed the timer so the first hop fires after firstHopDelay seconds, then
-    // every hopInterval seconds thereafter.
-    this.hopTimer = this.level.hopInterval - this.level.firstHopDelay;
+  Game.prototype.togglePause = function () { this.paused = !this.paused; };
+
+  // --- Collision handling ---------------------------------------------------
+
+  Game.prototype._onContact = function (contact) {
+    var a = contact.getFixtureA().getUserData();
+    var b = contact.getFixtureB().getUserData();
+    if (!a || !b) return;
+    var hop = a.type === 'hopper' ? a : (b.type === 'hopper' ? b : null);
+    if (!hop) return;
+    var other = hop === a ? b : a;
+    var h = hop.ref;
+    if (!h.alive || h.exiting) return;
+    if (other.type === 'spike' || other.type === 'fire') this.events.push({ k: 'die', h: h });
+    else if (other.type === 'portal') this.events.push({ k: 'save', h: h, portal: other.index });
+    else if (other.type === 'wall') this.events.push({ k: 'flip', h: h });
+    else if (other.type === 'spring') this.events.push({ k: 'spring', h: h });
   };
 
-  // --- Internal events ------------------------------------------------------
+  Game.prototype._drain = function () {
+    for (var i = 0; i < this.events.length; i++) {
+      var e = this.events[i], h = e.h;
+      if (!h.alive || h.exiting) continue;
+      if (e.k === 'die') this._die(h);
+      else if (e.k === 'save') this._save(h, e.portal);
+      else if (e.k === 'flip') this._flip(h);
+      else if (e.k === 'spring') this._spring(h);
+    }
+    this.events.length = 0;
+  };
 
-  Game.prototype._onDeath = function () {
-    if (!this.hopper.alive || this.hopper.exiting) return;
-    this.hopper.alive = false;
-    this.status = 'lost';
-    var body = this.hopper.body;
+  Game.prototype._die = function (h) {
+    h.alive = false;
+    this.dead++;
+    var body = h.body;
     body.setFixedRotation(false);
     body.getFixtureList().setSensor(true);
-    // Get knocked upward, like the original onContactHazard.
     var m = body.getMass();
-    body.applyLinearImpulse(this.pl.Vec2(m * px2m(30), m * px2m(-260)), body.getWorldCenter(), true);
-    body.applyAngularImpulse(body.getInertia() * 6, true);
+    body.applyLinearImpulse(this.pl.Vec2(m * px2m(20 * h.dir), m * px2m(-240)), body.getWorldCenter(), true);
+    body.applyAngularImpulse(body.getInertia() * (5 * h.dir), true);
   };
 
-  Game.prototype._onExit = function () {
-    if (!this.hopper.alive || this.hopper.exiting) return;
-    this.hopper.exiting = true;
-    this.status = 'won';
-    var body = this.hopper.body;
+  Game.prototype._save = function (h, portalIndex) {
+    h.exiting = true;
+    this.saved++;
+    this.justSaved = true; // one-shot flag for SFX, cleared by consumer
+    var p = this.level.portals[portalIndex] || this.level.portals[0];
+    h.exitCX = p.x + 24; h.exitCY = p.y + 24; // portal centre — twirl target
+    var body = h.body;
     body.setLinearVelocity(this.pl.Vec2(0, 0));
     body.setGravityScale(0);
     body.getFixtureList().setSensor(true);
   };
 
-  Game.prototype._hop = function () {
-    var body = this.hopper.body, level = this.level;
-    var m = body.getMass();
-    // Impulse = mass * desired takeoff velocity (from rest this sets velocity).
-    var imp = this.pl.Vec2(m * px2m(level.hopVelX), m * px2m(-level.hopVelY));
-    body.setLinearVelocity(this.pl.Vec2(0, 0));
-    body.applyLinearImpulse(imp, body.getWorldCenter(), true);
+  Game.prototype._flip = function (h) {
+    if (h.flipCd > 0) return;
+    h.dir = -h.dir;
+    h.flipCd = 0.25;
+    // Nudge away from the wall so we don't immediately re-collide.
+    var v = h.body.getLinearVelocity();
+    h.body.setLinearVelocity(this.pl.Vec2(px2m(this.level.hopVelX * 0.4 * h.dir), v.y));
+    var p = h.body.getPosition();
+    h.body.setPosition(this.pl.Vec2(p.x + px2m(3 * h.dir), p.y));
+  };
+
+  Game.prototype._spring = function (h) {
+    var body = h.body, v = body.getLinearVelocity();
+    if (v.y > -px2m(60)) { // only launch when moving down / slow (i.e. landed on it)
+      body.setLinearVelocity(this.pl.Vec2(v.x, px2m(-(this.level.springVelY || 360))));
+      h.hopTimer = 0;
+    }
   };
 
   // --- Simulation step ------------------------------------------------------
 
   Game.prototype.step = function (dt) {
-    if (dt > 0.05) dt = 0.05; // clamp to keep physics stable on lag/tab-switch
+    if (this.paused || this.status !== 'playing') { return this.status; }
+    if (dt > 0.05) dt = 0.05;
     this.time += dt;
-    this.portalAngle += dt * (Math.PI / 2); // 90 deg/sec like the original
+    this.fireTime += dt;
+    this.portalAngle += dt * (Math.PI / 2);
 
-    if (this.status === 'playing') {
-      this.hopTimer += dt;
-      if (this.hopper.alive && !this.hopper.exiting && this.hopTimer >= this.level.hopInterval) {
-        this.hopTimer -= this.level.hopInterval;
-        this._hop();
+    // Spawning.
+    this.spawns.forEach(function (s) {
+      if (s.emitted >= s.def.count) return;
+      s.timer += dt;
+      var interval = s.def.interval || 1.2;
+      if (s.timer >= (s.emitted === 0 ? 0 : interval)) {
+        s.timer = 0;
+        this._spawnHopper(s.def.x, s.def.y, s.def.dir);
+        s.emitted++;
       }
-    }
+    }, this);
+
+    // Per-hopper timers + hopping.
+    this.hoppers.forEach(function (h) {
+      if (!h.alive || h.exiting) return;
+      if (h.flipCd > 0) h.flipCd -= dt;
+      h.hopTimer += dt;
+      if (h.hopTimer >= this.level.hopInterval) { h.hopTimer -= this.level.hopInterval; this._hop(h); }
+    }, this);
 
     this.world.step(dt);
+    this._drain();
 
-    // Portal-exit animation: shrink the hopper into the portal centre.
-    if (this.hopper.exiting && this.exitT < 1) {
-      this.exitT = Math.min(1, this.exitT + dt / 0.8);
-    }
-    if (!this.hopper.alive) this.deathT += dt;
-
-    // Fell off the level.
-    if (this.status === 'playing') {
-      var pos = this.hopper.body.getPosition();
-      if (pos.y * PPM > this.level.height + 48) {
-        this.status = 'lost';
-        this.hopper.alive = false;
+    // Exit animation + fall-off-the-world death.
+    this.hoppers.forEach(function (h) {
+      if (h.exiting && h.exitT < 1) h.exitT = Math.min(1, h.exitT + dt / 0.7);
+      if (h.alive && !h.exiting) {
+        var y = h.body.getPosition().y * PPM;
+        if (y > this.level.height + 60) { h.alive = false; this.dead++; }
       }
-    }
+    }, this);
+
+    this._checkEnd();
     return this.status;
+  };
+
+  Game.prototype._checkEnd = function () {
+    if (this.saved >= this.required) { this.status = 'won'; return; }
+    // Can we still possibly reach the target?
+    if (this.totalToSpawn - this.dead < this.required) { this.status = 'lost'; return; }
+    // All hoppers accounted for but target not met.
+    var allSpawned = this.spawns.every(function (s) { return s.emitted >= s.def.count; });
+    if (allSpawned && (this.saved + this.dead) >= this.totalToSpawn && this.saved < this.required) {
+      this.status = 'lost';
+    }
   };
 
   // --- Render snapshot (px) -------------------------------------------------
 
   Game.prototype.getState = function () {
-    var b = this.hopper.body;
-    var p = b.getPosition();
+    var hoppers = this.hoppers.map(function (h) {
+      var p = h.body.getPosition();
+      return { x: p.x * PPM, y: p.y * PPM, angle: h.body.getAngle(), dir: h.dir,
+               alive: h.alive, exiting: h.exiting, exitT: h.exitT,
+               exitCX: h.exitCX, exitCY: h.exitCY };
+    });
     return {
-      status: this.status,
-      hopper: {
-        x: p.x * PPM,
-        y: p.y * PPM,
-        angle: b.getAngle(),
-        alive: this.hopper.alive,
-        exiting: this.hopper.exiting,
-        exitT: this.exitT,
-      },
-      portalAngle: this.portalAngle,
-      planks: this.planks,
-      planksLeft: this.planksLeft,
+      status: this.status, paused: this.paused,
+      hoppers: hoppers, items: this.items,
+      portalAngle: this.portalAngle, fireTime: this.fireTime,
+      inv: this.inv, saved: this.saved, dead: this.dead,
+      required: this.required, total: this.totalToSpawn,
     };
   };
 
   Game.PPM = PPM;
+  Game.TOOLS = TOOLS;
   return Game;
 });

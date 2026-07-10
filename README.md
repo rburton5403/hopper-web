@@ -1,50 +1,55 @@
 # Hopper (Web)
 
-A browser remake of **Hopper**, a physics puzzle game originally built with the
-Corona SDK (Gargle Games, 2013). The hopper hops on its own — up and to the
-right, over and over — and can't steer. Your job is to build it a path.
+A browser remake of **Hopper**, a physics puzzle originally built with the Corona
+SDK (Gargle Games, 2013) — reimagined as a **real-time, Lemmings-style** game.
+
+Hoppers spawn and hop on their own, and they never stop. They hop in the
+direction they face and can't steer, so they'll happily hop off a cliff into the
+fire. You place tools **in real time** to build them a safe path to the portal.
 
 **▶ Play it:** https://rburton5403.github.io/hopper-web/
 
-![Hopper gameplay](assets/hopper.png)
-
 ## How to play
 
-- The hopper auto-hops on a timer. It always launches up and to the right.
-- **Left-click** in the pit to drop a **plank** as a stepping stone.
-- **Right-click** (or the **Undo** button) removes the last plank.
-- Press **Go** to release the hopper. Reach the spinning **portal** to win.
-- Touch a **spike** or fall in the pit and you start over (**Reset**).
+- Pick a tool from the tray (or press **1** / **2** / **3**).
+- **Left-click** the board to place it; **right-click** to undo the last one.
+- **Plank** — a bridge to hop across. **Barrier** — bounces hoppers back the
+  other way. **Spring** — launches them high.
+- Get enough hoppers into a spinning **portal** to win; they spin, shrink and
+  twirl in as they're sucked home. **Space** pauses, **R** restarts.
 
-You have 3 planks — but the first level only needs one well-placed board.
-
-Add `?auto` to the URL to watch the game solve itself.
+Two levels: **The Spike Pit** (a one-plank teacher) and **Two Ways Home**
+(four hoppers, two portals, fire, and the full toolset).
 
 ## How it's built
 
-Plain HTML5 canvas + JavaScript, no build step, no framework — it's just static
-files, so it deploys straight to GitHub Pages.
+Plain HTML5 canvas + JavaScript, no build step, no framework — just static files,
+so it deploys straight to GitHub Pages.
 
 | File | Role |
 |------|------|
 | `js/level.js`  | Level data + physics tuning (DOM-free, UMD) |
-| `js/game.js`   | Physics, hopping, collisions, win/lose (DOM-free, UMD) |
-| `js/render.js` | Canvas renderer |
-| `js/main.js`   | Asset loading, input, UI, animation loop |
-| `js/planck.min.js` | [planck.js](https://github.com/piqnt/planck.js) — a Box2D port for the physics |
+| `js/game.js`   | Real-time engine: hopping, direction/flip, spawns, hazards, tools, win/lose (DOM-free, UMD) |
+| `js/render.js` | Canvas renderer — hoppers, animated fire, tools, portal twirl |
+| `js/sound.js`  | Synthesized Web Audio SFX (portal "suck", splat, place) |
+| `js/main.js`   | Assets, real-time input, tool palette, HUD, level select, loop |
+| `js/planck.min.js` | [planck.js](https://github.com/piqnt/planck.js) — a Box2D port, for the physics |
 
-Physics constants (hop velocity, gravity, hop interval) mirror the original
-Corona game's feel: a bottom-heavy collision body, fixed rotation, and an impulse
-hop. Because `game.js` and `level.js` have no DOM dependencies, the game logic is
-verified headlessly in Node:
+Because `game.js` and `level.js` have no DOM dependencies, the mechanics are
+verified headlessly in Node (load planck with `global.window = global` first):
 
 ```bash
-node test/measure.js   # measures a single hop arc (apex + horizontal distance)
-node test/sim.js        # proves the level is winnable and finds solutions
+node test/sim2.js    # Level 1 is winnable (and loses with no plank)
+node test/sim3.js    # Level 2 is winnable; searches plank-bridge solutions
+node test/tools.js   # barrier flips hopper direction; spring launches it high
 ```
+
+**Key physics gotcha:** `hopInterval` must exceed the hop airtime
+(`2*hopVelY/gravity`), or a hopper re-hops in mid-air and flies away instead of
+landing and resting between hops.
 
 ## Credits
 
 - Original **Hopper** game and art: Gargle Games (2013).
-- Physics: [planck.js](https://github.com/piqnt/planck.js).
+- Physics: [planck.js](https://github.com/piqnt/planck.js). Inspired by Lemmings.
 - Web remake: this repository.

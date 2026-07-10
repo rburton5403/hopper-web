@@ -1,70 +1,67 @@
-// Level definitions for Hopper Web.
-// Coordinates are in canvas pixels, origin top-left, y increasing downward.
-// The physics layer treats 16px = 1 meter (matching the original 16px grid).
-// This module is UMD so it can be loaded in the browser (window.HopperLevels)
-// and required in node for headless simulation/testing.
+// Level definitions for Hopper Web (real-time, Lemmings-style).
+// Coordinates are canvas pixels, origin top-left, y down. 16px == 1 physics meter.
+// UMD: window.HopperLevels in the browser, require() in node for headless tests.
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.HopperLevels = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var CELL = 16; // pixels per grid cell (and per physics meter)
-
-  // Level 1: a spike pit between two grass platforms. The hopper spawns on the
-  // left, auto-hops up-and-to-the-right, and must reach the spinning portal on
-  // the right. The player bridges the gap by placing planks as stepping stones.
-  var LEVEL1 = {
-    name: 'The Spike Pit',
-    width: 640,
-    height: 384,
-    background: 'background',
-
-    // Physics tuning (see game.js). Gravity in px/s^2 (16px = 1m).
-    // hopInterval MUST exceed the hop airtime (2*hopVelY/gravity) so the hopper
-    // lands and rests between hops instead of flying continuously.
+  // Shared physics feel. hopInterval MUST exceed hop airtime (2*hopVelY/gravity)
+  // so hoppers land and rest between hops instead of flying continuously.
+  var PHYS = {
     gravity: 600,
-    // Desired hop takeoff velocity in px/s (up and to the right).
     hopVelX: 105,
-    hopVelY: 257,
-    hopInterval: 1.1,   // seconds between hops (airtime ~0.86s)
-    firstHopDelay: 0.5, // seconds before the very first hop
+    hopVelY: 257,     // airtime ~0.86s, per-hop reach ~89px, apex ~53px
+    hopInterval: 1.1,
+    firstHopDelay: 0.5,
+    springVelY: 400,  // spring launch (apex ~133px)
+  };
+  function withPhys(o) { for (var k in PHYS) if (!(k in o)) o[k] = PHYS[k]; return o; }
 
-    // Blocks are static rectangles rendered by tiling a 32px texture.
+  var W = 960, H = 540;
+
+  // ------------------------------------------------------------------ Level 1
+  // Teacher: one hopper, one spike pit, one plank to bridge it.
+  var LEVEL1 = withPhys({
+    name: 'The Spike Pit',
+    subtitle: 'Drop a plank to bridge the gap.',
+    width: W, height: H, background: 'background',
     blocks: [
-      // Left platform (grass on top, dirt body). Top surface at y = 288.
-      { x: 0,   y: 288, w: 224, h: 96, tex: 'grass' },
-      // Right platform.
-      { x: 416, y: 288, w: 224, h: 96, tex: 'grass' },
-      // Thin floor at the bottom of the pit that the spikes stand on.
-      { x: 224, y: 368, w: 192, h: 16, tex: 'dirt' },
+      { x: 0,   y: 430, w: 410, h: 110, tex: 'grass' },
+      { x: 550, y: 430, w: 410, h: 110, tex: 'grass' },
+      { x: 410, y: 500, w: 140, h: 40,  tex: 'dirt' },
     ],
+    spikes: [ { x: 420, y: 468 }, { x: 452, y: 468 }, { x: 484, y: 468 }, { x: 516, y: 468 } ],
+    fires: [],
+    spawns: [ { x: 100, y: 385, dir: 1, count: 1, interval: 0, startDelay: 1.2 } ],
+    portals: [ { x: 700, y: 386 } ],
+    required: 1,
+    inventory: { plank: 3, barrier: 0, spring: 0 },
+    edgesFlip: true,
+  });
 
-    // Spikes: 16x32 triangles standing on the pit floor. x is the left edge.
-    spikes: [
-      { x: 240, y: 336 },
-      { x: 272, y: 336 },
-      { x: 304, y: 336 },
-      { x: 336, y: 336 },
-      { x: 368, y: 336 },
+  // ------------------------------------------------------------------ Level 2
+  // Multi-hopper: bridge a fire pit with planks, seat hoppers on the ground
+  // portal with a barrier (so they don't hop past into the spikes), and use a
+  // spring to send extras up to the high portal. Save 3 of 4.
+  var LEVEL2 = withPhys({
+    name: 'Two Ways Home',
+    subtitle: 'Bridge the fire, turn them around, or spring them up. Save 3 of 4.',
+    width: W, height: H, background: 'background',
+    blocks: [
+      { x: 0,   y: 470, w: 360, h: 70, tex: 'grass' },   // left floor
+      { x: 560, y: 470, w: 400, h: 70, tex: 'grass' },   // right floor
+      { x: 700, y: 300, w: 200, h: 20, tex: 'grass' },   // high ledge (portal B)
     ],
+    spikes: [ { x: 872, y: 438 }, { x: 890, y: 438 }, { x: 908, y: 438 }, { x: 926, y: 438 } ],
+    fires: [ { x: 372, y: 508 }, { x: 420, y: 508 }, { x: 468, y: 508 }, { x: 516, y: 508 } ],
+    spawns: [ { x: 70, y: 425, dir: 1, count: 4, interval: 1.5, startDelay: 1.5 } ],
+    portals: [ { x: 720, y: 402 }, { x: 776, y: 232 } ],  // A: right floor, B: high ledge
+    required: 3,
+    inventory: { plank: 4, barrier: 2, spring: 1 },
+    edgesFlip: true,
+  });
 
-    // Spawn point: the hopper appears here (x,y is the hopper's top-left).
-    spawn: { x: 176, y: 243 },
-
-    // Portal (48x48). x,y is its top-left. Win when the hopper touches it.
-    // Centred at x=608, sitting on the right platform at a natural landing spot.
-    portal: { x: 584, y: 242 },
-
-    // What the player has to work with.
-    inventory: { planks: 3, ropes: 0 },
-
-    // A plank is a static rectangle the player drops into the world.
-    plankSize: { w: 64, h: 16 },
-  };
-
-  return {
-    CELL: CELL,
-    LEVELS: [LEVEL1],
-  };
+  return { LEVELS: [LEVEL1, LEVEL2] };
 });
