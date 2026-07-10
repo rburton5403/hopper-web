@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Hopper</title>
+  <meta name="description" content="Hopper — a physics puzzle. Drop planks to guide the hopper across the spike pit to the portal." />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <header class="topbar">
+      <h1>Hopper</h1>
+      <p class="tag">Guide the hopper home</p>
+    </header>
+
+    <div class="stage">
+      <canvas id="game" aria-label="Hopper game board"></canvas>
+      <div id="overlay" class="overlay">
+        <div class="panel">
+          <p id="overlayText"></p>
+          <button id="overlayBtn" class="btn primary">Play Again</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hud">
+      <div class="inventory" title="Planks remaining">
+        <img src="assets/planks.png" alt="Planks" class="ico" />
+        <span id="planksLeft">3</span>
+      </div>
+      <div class="controls">
+        <button id="undo" class="btn">Undo</button>
+        <button id="reset" class="btn">Reset</button>
+        <button id="go" class="btn primary">Go ▶</button>
+      </div>
+    </div>
+
+    <p id="hint" class="hint">Click in the pit to drop a plank, then press Go.</p>
+
+    <details class="how">
+      <summary>How to play</summary>
+      <p>The hopper hops on its own — up and to the right, again and again. It can't
+      change direction, so it needs a path. <strong>Left-click</strong> in the pit to
+      drop a plank as a stepping stone (<strong>right-click</strong> or <strong>Undo</strong>
+      to remove the last one). When your bridge looks right, press <strong>Go</strong>.
+      Reach the spinning portal to win; touch a spike or fall in the pit and it's back to the
+      drawing board.</p>
+      <p class="credit">A web remake of <em>Hopper</em> (Gargle Games, 2013). Physics by
+      <a href="https://github.com/piqnt/planck.js" target="_blank" rel="noopener">planck.js</a>.</p>
+    </details>
+  </main>
+
+  <script src="js/planck.min.js"></script>
+  <script src="js/level.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
