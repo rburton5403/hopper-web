@@ -335,12 +335,14 @@
         h.hopTimer = this.level.hopInterval - 0.3;
         return;
       }
-      // Spring: while resting on a pad, launch straight up (repeatedly, so a
-      // whole stream bounces through — not just the first hopper to touch it).
+      // Spring: launch up AND forward (in the hopper's travel direction), like a
+      // trampoline — so it arcs onward instead of bouncing straight up in place.
       if (this._touchingSpring(h)) {
         var sv = h.body.getLinearVelocity();
         if (sv.y > -px2m(80)) {
-          h.body.setLinearVelocity(this.pl.Vec2(0, px2m(-(this.level.springVelY || 360))));
+          h.body.setLinearVelocity(this.pl.Vec2(
+            px2m((this.level.springVelX || 118) * h.dir),
+            px2m(-(this.level.springVelY || 430))));
           h.hopTimer = 0;
         }
         return;
