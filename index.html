@@ -29,9 +29,9 @@
 
     <div class="hud">
       <div class="stats">
-        <span class="stat home">🏠 <b id="saved">0</b>/<span id="required">1</span></span>
-        <span class="stat">Hoppers <b id="out">1</b></span>
-        <span class="stat dead">💀 <b id="dead">0</b></span>
+        <span class="stat score">⭐ <b id="score">0</b>/<span id="target">1</span></span>
+        <span class="stat home">🏠 <b id="saved">0</b></span>
+        <span class="stat dead">💀 <b id="dead">0</b>/<span id="out">1</span></span>
       </div>
       <div id="palette" class="palette"></div>
       <div class="controls">
@@ -49,11 +49,16 @@
       direction they're facing and can't steer, so they'll cheerfully hop off a
       cliff into the fire. Your job is to build them a safe path <em>in real time</em>.</p>
       <ul>
-        <li><b>Pick a tool</b> from the tray (or press <b>1</b>/<b>2</b>/<b>3</b>).</li>
+        <li><b>Pick a tool</b> from the tray (or press <b>1</b>–<b>4</b>).</li>
         <li><b>Left-click</b> the board to place it; <b>right-click</b> to undo the last one.</li>
         <li><b>Plank</b> = a bridge. <b>Barrier</b> = bounces hoppers back the other way.
-            <b>Spring</b> = launches them high.</li>
-        <li>Get enough hoppers into a spinning <b>portal</b> to win. <b>Space</b> pauses, <b>R</b> restarts.</li>
+            <b>Spring</b> = bounces them straight up (put a portal above it).
+            <b>Balloon</b> = the next hopper to touch it floats up, drifting on the wind, then it pops.</li>
+        <li>Each <b>portal</b> is worth points by how hard it is to reach. Hit the target
+            <b>score</b> to win — so the easy portal alone often isn't enough; combine tools
+            and aim some hoppers at the high-value portal.</li>
+        <li>Hoppers pass through each other, hop off cliffs if unguided, and later levels
+            spawn them from <b>both sides</b>. <b>Space</b> pauses, <b>R</b> restarts.</li>
       </ul>
       <p class="credit">A web remake of <em>Hopper</em> (Gargle Games, 2013). Physics by
       <a href="https://github.com/piqnt/planck.js" target="_blank" rel="noopener">planck.js</a>.</p>

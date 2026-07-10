@@ -45,14 +45,16 @@
       }
     }
 
-    // Portals.
-    level.portals.forEach(function (p) {
+    // Portals (with a point-value badge).
+    level.portals.forEach(function (p, i) {
       ctx.save();
       ctx.translate(p.x + 24, p.y + 24);
       ctx.rotate(state.portalAngle);
       if (img.portal) ctx.drawImage(img.portal, -24, -24, SIZES.portal.w, SIZES.portal.h);
       else { ctx.fillStyle = '#b388ff'; ctx.beginPath(); ctx.arc(0, 0, 22, 0, 7); ctx.fill(); }
       ctx.restore();
+      var pts = state.portalPoints ? state.portalPoints[i] : 1;
+      this._badge(p.x + 24, p.y - 4, pts);
     }, this);
 
     // Hoppers.
@@ -81,6 +83,19 @@
     if (img.hopper) ctx.drawImage(img.hopper, -s.w / 2, -s.h / 2, s.w, s.h);
     else { ctx.fillStyle = '#43a047'; ctx.fillRect(-s.w / 2, -s.h / 2, s.w, s.h); }
     ctx.restore();
+
+    // A balloon carrying the hopper aloft.
+    if (h.floating && h.alive && !h.exiting) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(90,60,30,.7)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x, y - s.h / 2); ctx.lineTo(x, y - s.h / 2 - 20); ctx.stroke();
+      ctx.fillStyle = '#e0466e';
+      ctx.beginPath(); ctx.ellipse(x, y - s.h / 2 - 32, 13, 16, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#b02a54'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,.45)';
+      ctx.beginPath(); ctx.ellipse(x - 4, y - s.h / 2 - 37, 3, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
   };
 
   Renderer.prototype._item = function (it, valid) {
@@ -88,6 +103,21 @@
     else if (it.type === 'barrier') this._barrier(it.x, it.y, it.w, it.h, valid);
     else if (it.type === 'spring') this._spring(it.x, it.y, it.w, it.h, valid);
     else if (it.type === 'balloon') this._balloon(it.x, it.y, it.w, it.h, valid);
+  };
+
+  // A little point-value badge, e.g. above a portal ("×2").
+  Renderer.prototype._badge = function (cx, cy, pts) {
+    var ctx = this.ctx;
+    ctx.save();
+    ctx.font = 'bold 15px "Trebuchet MS", sans-serif';
+    var label = pts + ' pt' + (pts === 1 ? '' : 's');
+    var w = ctx.measureText(label).width + 12;
+    ctx.fillStyle = 'rgba(30,20,45,.82)';
+    this._round(cx - w / 2, cy - 11, w, 20, 8); ctx.fill();
+    ctx.fillStyle = pts >= 3 ? '#ffd166' : pts === 2 ? '#8ce99a' : '#fff';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(label, cx, cy);
+    ctx.restore();
   };
 
   Renderer.prototype._balloon = function (x, y, w, h, valid) {

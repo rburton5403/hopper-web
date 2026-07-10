@@ -14,15 +14,21 @@ fire. You place tools **in real time** to build them a safe path to the portal.
 - Pick a tool from the tray (or press **1** / **2** / **3**).
 - **Left-click** the board to place it; **right-click** to undo the last one.
 - **Plank** — a bridge to hop across. **Barrier** — bounces hoppers back the
-  other way. **Spring** — launches them straight up. **Balloon** — floats the
-  next hopper that touches it up to a higher ledge (used once).
-- Get enough hoppers into a spinning **portal** to win; they spin, shrink and
-  twirl in as they're sucked home. **Space** pauses, **R** restarts.
+  other way. **Spring** — bounces them straight up (put a portal above it).
+  **Balloon** — the next hopper to touch it floats up, drifting on the level's
+  wind, until it pops.
+- **Scoring:** every portal is worth points by how hard it is to reach. You win
+  by hitting a **target score**, so the easy 1-pt portal often isn't enough —
+  you have to combine tools and send some hoppers to a high-value portal. Saved
+  hoppers spin, shrink and twirl in as they're sucked home.
+- Hoppers pass through each other, and from later levels spawn from **both
+  sides**. If every hopper gets stuck for a few seconds the level ends. **Space**
+  pauses, **R** restarts.
 
-Five levels so far, growing toward ten — progressively more hoppers and a
-higher minimum to clear: *The Spike Pit* (1) → *Two Ways Home* (4, save 3) →
-*The Long Haul* (8, save 6) → *Crowd Control* (10, save 7) → *The Gauntlet*
-(14, save 10).
+Five levels so far, growing toward ten — from a one-plank teacher to a two-sided
+gauntlet: *The Spike Pit* → *Two Ways Home* → *The Long Haul* → *Crowd Control*
+→ *The Gauntlet*. From Level 3 on, reaching the target requires more than one
+kind of tool.
 
 ## How it's built
 

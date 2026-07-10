@@ -15,17 +15,24 @@
     hopVelY: 257,     // airtime ~0.86s, per-hop reach ~89px, apex ~53px
     hopInterval: 1.1,
     firstHopDelay: 0.5,
-    springVelY: 400,  // spring launch (apex ~133px)
+    springVelY: 400,   // spring launch (apex ~133px)
+    balloonTime: 1.3,  // seconds a hopper is carried by a balloon
+    balloonRise: 170,  // px/s the balloon rises
+    windSpeed: 70,     // px/s horizontal drift while ballooning (× level.wind)
   };
+  // Per level: `wind` is -1 (blows left), 0 (straight up), or +1 (blows right).
   function withPhys(o) { for (var k in PHYS) if (!(k in o)) o[k] = PHYS[k]; return o; }
 
   var W = 960, H = 540;
 
+  // Build a row of fire cells spanning [x0,x1) at the given top y.
+  function fireRow(x0, x1, y) { var a = []; for (var x = x0; x < x1; x += 48) a.push({ x: x, y: y }); return a; }
+
   // ------------------------------------------------------------------ Level 1
-  // Teacher: one hopper, one spike pit, one plank to bridge it.
+  // Teacher: one hopper, one spike pit, one plank to bridge it. (1 pt to win.)
   var LEVEL1 = withPhys({
     name: 'The Spike Pit',
-    subtitle: 'Drop a plank to bridge the gap.',
+    subtitle: 'Drop a plank to bridge the gap and reach the portal.',
     width: W, height: H, background: 'background',
     blocks: [
       { x: 0,   y: 430, w: 410, h: 110, tex: 'grass' },
@@ -35,98 +42,102 @@
     spikes: [ { x: 420, y: 468 }, { x: 452, y: 468 }, { x: 484, y: 468 }, { x: 516, y: 468 } ],
     fires: [],
     spawns: [ { x: 100, y: 385, dir: 1, count: 1, interval: 0, startDelay: 1.2 } ],
-    portals: [ { x: 700, y: 386 } ],
-    required: 1,
-    inventory: { plank: 3, barrier: 0, spring: 0 },
+    portals: [ { x: 700, y: 386, points: 1 } ],
+    targetScore: 1,
+    inventory: { plank: 3 },
     edgesFlip: true,
   });
 
   // ------------------------------------------------------------------ Level 2
-  // Multi-hopper: bridge a fire pit with planks, seat hoppers on the ground
-  // portal with a barrier (so they don't hop past into the spikes), and use a
-  // spring to send extras up to the high portal. Save 3 of 4.
+  // Two portals, two point values. Bridging the fire to the 1-pt portal is
+  // enough here (target 3) — a gentle intro to scoring and the high portal.
   var LEVEL2 = withPhys({
     name: 'Two Ways Home',
-    subtitle: 'Bridge the fire, turn them around, or spring them up. Save 3 of 4.',
+    subtitle: 'Portals are worth different points. Reach a score of 3.',
     width: W, height: H, background: 'background',
     blocks: [
-      { x: 0,   y: 470, w: 360, h: 70, tex: 'grass' },   // left floor
-      { x: 560, y: 470, w: 400, h: 70, tex: 'grass' },   // right floor
+      { x: 0,   y: 470, w: 360, h: 70, tex: 'grass' },
+      { x: 560, y: 470, w: 400, h: 70, tex: 'grass' },
       { x: 700, y: 300, w: 200, h: 20, tex: 'grass' },   // high ledge (portal B)
     ],
     spikes: [ { x: 872, y: 438 }, { x: 890, y: 438 }, { x: 908, y: 438 }, { x: 926, y: 438 } ],
     fires: [ { x: 372, y: 508 }, { x: 420, y: 508 }, { x: 468, y: 508 }, { x: 516, y: 508 } ],
     spawns: [ { x: 70, y: 425, dir: 1, count: 4, interval: 1.5, startDelay: 1.5 } ],
-    portals: [ { x: 720, y: 402 }, { x: 776, y: 232 } ],  // A: right floor, B: high ledge
-    required: 3,
+    portals: [ { x: 720, y: 402, points: 1 }, { x: 776, y: 276, points: 2 } ],
+    targetScore: 3,
     inventory: { plank: 4, barrier: 2, spring: 1 },
     edgesFlip: true,
   });
 
   // ------------------------------------------------------------------ Level 3
-  // The crowd grows: 8 hoppers pour out over a wide fire canyon. Lay a plank
-  // walkway across to the portal. Save 6 of 8.
+  // First "must combine tools" level: the 1-pt portal alone can't hit the
+  // target, so you must ALSO bridge to the spring and bounce hoppers up to the
+  // 2-pt portal. Plank + Spring required. 8 hoppers, target 10.
   var LEVEL3 = withPhys({
     name: 'The Long Haul',
-    subtitle: 'A whole crowd of hoppers over a wide fire canyon. Save 6 of 8.',
+    subtitle: 'One portal isn\'t enough — bridge AND spring them up. Reach 10.',
     width: W, height: H, background: 'background',
     blocks: [
-      { x: 0,   y: 470, w: 300, h: 70, tex: 'grass' },   // left floor
-      { x: 660, y: 470, w: 300, h: 70, tex: 'grass' },   // right floor
-      { x: 380, y: 300, w: 180, h: 20, tex: 'grass' },   // high ledge (portal B)
+      { x: 0,   y: 470, w: 320, h: 70, tex: 'grass' },   // left floor
+      { x: 560, y: 470, w: 400, h: 70, tex: 'grass' },   // right floor
+      { x: 636, y: 300, w: 130, h: 20, tex: 'grass' },   // high ledge (portal B, above spring)
     ],
-    spikes: [ { x: 904, y: 438 }, { x: 922, y: 438 }, { x: 940, y: 438 } ],
-    fires: [
-      { x: 312, y: 508 }, { x: 360, y: 508 }, { x: 408, y: 508 }, { x: 456, y: 508 },
-      { x: 504, y: 508 }, { x: 552, y: 508 }, { x: 600, y: 508 },
-    ],
-    spawns: [ { x: 60, y: 425, dir: 1, count: 8, interval: 1.2, startDelay: 1.2 } ],
-    portals: [ { x: 740, y: 402 }, { x: 446, y: 232 } ],  // A: right floor, B: high ledge
-    required: 6,
-    inventory: { plank: 6, barrier: 2, spring: 1 },
+    spikes: [],
+    fires: fireRow(324, 556, 508),
+    spawns: [ { x: 60, y: 425, dir: 1, count: 8, interval: 1.5, startDelay: 1.2 } ],
+    // A: far right floor (1 pt, insufficient alone); B: above a spring (2 pt).
+    portals: [ { x: 872, y: 402, points: 1 }, { x: 676, y: 276, points: 2 } ],
+    targetScore: 10,
+    inventory: { plank: 6, spring: 2, barrier: 2, balloon: 2 },
     edgesFlip: true,
   });
 
-  // Build a row of fire cells spanning [x0,x1) at the given top y.
-  function fireRow(x0, x1, y) { var a = []; for (var x = x0; x < x1; x += 48) a.push({ x: x, y: y }); return a; }
-
   // ------------------------------------------------------------------ Level 4
-  // Crowd control: 10 hoppers over a broad canyon, with a high alternate portal.
+  // Wider canyon, 10 hoppers. Same combo, higher bar: target 14 (needs 7 up
+  // the 2-pt portal). Plank + Spring.
   var LEVEL4 = withPhys({
     name: 'Crowd Control',
-    subtitle: '10 hoppers, a broad fire canyon, two ways home. Save 7.',
+    subtitle: 'A broader canyon and a bigger crowd. Reach a score of 14.',
     width: W, height: H, background: 'background',
     blocks: [
-      { x: 0,   y: 470, w: 240, h: 70, tex: 'grass' },
-      { x: 720, y: 470, w: 240, h: 70, tex: 'grass' },
-      { x: 520, y: 290, w: 160, h: 20, tex: 'grass' },   // high ledge (portal B)
+      { x: 0,   y: 470, w: 260, h: 70, tex: 'grass' },
+      { x: 640, y: 470, w: 320, h: 70, tex: 'grass' },
+      { x: 696, y: 300, w: 130, h: 20, tex: 'grass' },   // high ledge (portal B, above spring)
     ],
     spikes: [],
-    fires: fireRow(252, 708, 508),
-    spawns: [ { x: 40, y: 425, dir: 1, count: 10, interval: 1.0, startDelay: 1.2 } ],
-    portals: [ { x: 800, y: 402 }, { x: 576, y: 222 } ],
-    required: 7,
-    inventory: { plank: 8, barrier: 2, spring: 1, balloon: 2 },
+    fires: fireRow(264, 636, 508),
+    spawns: [ { x: 40, y: 425, dir: 1, count: 10, interval: 1.4, startDelay: 1.2 } ],
+    portals: [ { x: 900, y: 402, points: 1 }, { x: 736, y: 276, points: 2 } ],
+    targetScore: 14,
+    inventory: { plank: 7, spring: 2, barrier: 2, balloon: 2 },
     edgesFlip: true,
   });
 
   // ------------------------------------------------------------------ Level 5
-  // The gauntlet: 14 hoppers over the widest canyon yet. Save 10.
+  // The gauntlet: hoppers pour in from BOTH sides toward a central island.
+  // Bridge both fire pits, then spring them up the 3-pt central portal.
+  // 14 hoppers (7 each side), target 18.
   var LEVEL5 = withPhys({
     name: 'The Gauntlet',
-    subtitle: 'The widest canyon yet — 14 hoppers pouring out. Save 10.',
+    subtitle: 'Hoppers from both sides! Bridge in and spring them up. Reach 18.',
     width: W, height: H, background: 'background',
+    wind: 0,
     blocks: [
-      { x: 0,   y: 470, w: 200, h: 70, tex: 'grass' },
-      { x: 760, y: 470, w: 200, h: 70, tex: 'grass' },
-      { x: 410, y: 280, w: 160, h: 20, tex: 'grass' },   // high ledge (portal B)
+      { x: 0,   y: 470, w: 240, h: 70, tex: 'grass' },   // left floor
+      { x: 400, y: 470, w: 160, h: 70, tex: 'grass' },   // center island
+      { x: 720, y: 470, w: 240, h: 70, tex: 'grass' },   // right floor
+      { x: 416, y: 300, w: 128, h: 20, tex: 'grass' },   // high ledge (portal B, above spring)
     ],
-    spikes: [ { x: 900, y: 438 }, { x: 918, y: 438 }, { x: 936, y: 438 } ],
-    fires: fireRow(212, 748, 508),
-    spawns: [ { x: 36, y: 425, dir: 1, count: 14, interval: 0.9, startDelay: 1.2 } ],
-    portals: [ { x: 840, y: 402 }, { x: 466, y: 212 } ],
-    required: 10,
-    inventory: { plank: 9, barrier: 3, spring: 1, balloon: 2 },
+    spikes: [],
+    fires: fireRow(244, 396, 508).concat(fireRow(564, 716, 508)),
+    spawns: [
+      { x: 40,  y: 425, dir:  1, count: 7, interval: 1.5, startDelay: 1.2 },
+      { x: 900, y: 425, dir: -1, count: 7, interval: 1.5, startDelay: 1.8 },
+    ],
+    // A: center island floor (1 pt); B: high center (3 pt, above spring).
+    portals: [ { x: 520, y: 402, points: 1 }, { x: 456, y: 276, points: 3 } ],
+    targetScore: 18,
+    inventory: { plank: 8, spring: 2, barrier: 3, balloon: 2 },
     edgesFlip: true,
   });
 

@@ -27,8 +27,9 @@
   var ctx = canvas.getContext('2d');
   var els = {
     palette: document.getElementById('palette'),
+    score: document.getElementById('score'),
+    target: document.getElementById('target'),
     saved: document.getElementById('saved'),
-    required: document.getElementById('required'),
     out: document.getElementById('out'),
     dead: document.getElementById('dead'),
     hint: document.getElementById('hint'),
@@ -91,8 +92,9 @@
 
   function updateHud() {
     var s = game.getState();
+    els.score.textContent = s.score;
+    els.target.textContent = s.targetScore;
     els.saved.textContent = s.saved;
-    els.required.textContent = s.required;
     els.out.textContent = s.total;
     els.dead.textContent = s.dead;
     Object.keys(Game.TOOLS).forEach(function (type) {
@@ -117,8 +119,8 @@
     els.overlay.classList.toggle('lost', !won);
     var s = game.getState();
     els.overlayText.textContent = won
-      ? 'Hoppers home: ' + s.saved + '/' + s.required + ' — level cleared! 🎉'
-      : 'Only ' + s.saved + '/' + s.required + ' made it. Try again!';
+      ? 'Score ' + s.score + '/' + s.targetScore + ' — level cleared! 🎉'
+      : 'Scored ' + s.score + '/' + s.targetScore + ' (' + s.saved + ' home). Try again!';
     var hasNext = won && levelIdx < LEVELS.length - 1;
     els.overlayBtn.textContent = hasNext ? 'Next Level ▶' : (won ? 'Play Again' : 'Try Again');
     els.overlayBtn.dataset.next = hasNext ? '1' : '';
