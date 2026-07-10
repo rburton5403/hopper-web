@@ -51,6 +51,13 @@ html, body {
 .overlay.won .panel { box-shadow: 0 0 0 4px #59c26a, 0 14px 40px rgba(0,0,0,.4); }
 .overlay.lost .panel { box-shadow: 0 0 0 4px #e05a5a, 0 14px 40px rgba(0,0,0,.4); }
 
+/* Start / title overlay */
+.overlay.start { background: rgba(20, 16, 30, .65); }
+.starttitle { font-size: clamp(30px, 6vw, 44px); margin: 0 0 6px; letter-spacing: 1px; }
+.startsub { font-size: 16px; font-weight: 600; color: #444; margin: 0 0 18px; max-width: 30ch; }
+.btn.big { font-size: 22px; padding: 14px 34px; }
+.tiny { font-size: 13px; color: #888; margin: 14px 0 0; font-weight: 600; }
+
 /* HUD */
 .hud { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; justify-content: space-between; }
 .stats { display: flex; gap: 12px; align-items: center; font-weight: 700; }

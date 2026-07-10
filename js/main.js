@@ -40,8 +40,11 @@
     overlay: document.getElementById('overlay'),
     overlayText: document.getElementById('overlayText'),
     overlayBtn: document.getElementById('overlayBtn'),
+    startOverlay: document.getElementById('startOverlay'),
+    startBtn: document.getElementById('startBtn'),
     mute: document.getElementById('mute'),
   };
+  var hasStarted = false; // becomes true after the player clicks Start (unlocks audio)
 
   var images = {}, game, renderer, level, levelIdx = 0;
   var selectedTool = null, mouse = { x: 0, y: 0, over: false };
@@ -112,7 +115,7 @@
           ? 'Place a ' + TOOL_META[selectedTool].label.toLowerCase() + ' — left-click to drop, right-click to undo.'
           : 'Guide the hoppers to a portal!');
     }
-    els.pause.textContent = game.paused ? 'Resume' : 'Pause';
+    els.pause.textContent = (game.paused && hasStarted) ? 'Resume' : 'Pause';
   }
 
   function showOverlay(won) {
@@ -130,6 +133,7 @@
   function hideOverlay() { els.overlay.classList.remove('show'); }
 
   function loadLevel(idx) {
+    SFX.resume(); // any level (re)load is a user gesture — safe to unlock audio
     levelIdx = idx;
     level = LEVELS[idx];
     canvas.width = level.width; canvas.height = level.height;
@@ -143,6 +147,17 @@
     });
     buildPalette();
     hideOverlay();
+    // Until the player clicks Start, hold the game paused behind the title screen
+    // (a click is required for the browser to allow sound).
+    if (!hasStarted) { game.paused = true; els.startOverlay.classList.add('show'); }
+    updateHud();
+  }
+
+  function beginPlay() {
+    SFX.resume();
+    hasStarted = true;
+    els.startOverlay.classList.remove('show');
+    if (game) game.paused = false;
     updateHud();
   }
 
@@ -172,7 +187,11 @@
     }
   });
 
-  els.pause.addEventListener('click', function () { game.togglePause(); updateHud(); });
+  els.startBtn.addEventListener('click', beginPlay);
+  els.pause.addEventListener('click', function () {
+    if (!hasStarted) { beginPlay(); return; }
+    game.togglePause(); updateHud();
+  });
   els.restart.addEventListener('click', function () { loadLevel(levelIdx); });
   els.overlayBtn.addEventListener('click', function () {
     loadLevel(els.overlayBtn.dataset.next ? levelIdx + 1 : levelIdx);
