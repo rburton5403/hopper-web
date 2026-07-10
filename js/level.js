@@ -159,7 +159,9 @@
       { x: 90,  y: 205, dir:  1, count: 3, interval: 1.6, startDelay: 2.2 },
       { x: 830, y: 205, dir: -1, count: 3, interval: 1.6, startDelay: 2.6 },
     ],
-    portals: [ { x: 820, y: 402, points: 1 }, { x: 456, y: 250, points: 3 } ],
+    // A: low 1-pt portal in the centre (the walk-in default); B: high 3-pt above
+    // it (spring). No portal sits next to a spawn, so hoppers hop toward the fire.
+    portals: [ { x: 456, y: 402, points: 1 }, { x: 456, y: 250, points: 3 } ],
     targetScore: 24,
     inventory: { plank: 8, spring: 3, barrier: 3, balloon: 2 },
     edgesFlip: true,
