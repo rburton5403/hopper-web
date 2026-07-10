@@ -25,10 +25,13 @@ fire. You place tools **in real time** to build them a safe path to the portal.
   sides**. If every hopper gets stuck for a few seconds the level ends. **Space**
   pauses, **R** restarts.
 
-Five levels so far, growing toward ten — from a one-plank teacher to a two-sided
-gauntlet: *The Spike Pit* → *Two Ways Home* → *The Long Haul* → *Crowd Control*
-→ *The Gauntlet*. From Level 3 on, reaching the target requires more than one
-kind of tool.
+**Ten levels**, from a one-plank teacher to a two-tier finale. From Level 3 on,
+reaching the target needs more than one kind of tool, and later levels pour
+hoppers in from up to four directions across two tiers. On some levels the only
+portal is *behind* the spawn, so you **must** turn the crowd around with a
+barrier: *The Spike Pit* → *Two Ways Home* → *The Long Haul* → *Crowd Control* →
+*The Gauntlet* → *Two Tiers* → *About Face* → *Pinball* → *The Divide* → *The
+Hopper Trials*.
 
 ## How it's built
 
