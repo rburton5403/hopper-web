@@ -262,8 +262,8 @@
     spawns: [
       { x: 40,  y: 425, dir:  1, count: 5, interval: 1.4, startDelay: 1.0 },
       { x: 900, y: 425, dir: -1, count: 5, interval: 1.4, startDelay: 1.4 },
-      { x: 70,  y: 205, dir:  1, count: 5, interval: 1.4, startDelay: 2.4 },
-      { x: 870, y: 205, dir: -1, count: 5, interval: 1.4, startDelay: 2.8 },
+      { x: 110, y: 205, dir:  1, count: 5, interval: 1.4, startDelay: 2.4 },
+      { x: 820, y: 205, dir: -1, count: 5, interval: 1.4, startDelay: 2.8 },
     ],
     // A/B side (2 pt, behind the upper spawns — barrier), C central high (3 pt — spring).
     portals: [ { x: 20, y: 208, points: 2 }, { x: 900, y: 208, points: 2 }, { x: 456, y: 250, points: 3 } ],

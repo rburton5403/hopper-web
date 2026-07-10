@@ -45,7 +45,7 @@
 
   var images = {}, game, renderer, level, levelIdx = 0;
   var selectedTool = null, mouse = { x: 0, y: 0, over: false };
-  var prevStatus = 'playing', prevDead = 0, muted = false;
+  var prevStatus = 'playing', prevDead = 0, prevHopCount = 0, muted = false;
 
   function loadImages(map, done) {
     var keys = Object.keys(map), left = keys.length;
@@ -135,7 +135,7 @@
     canvas.width = level.width; canvas.height = level.height;
     game = new Game(window.planck, level);
     renderer = new Renderer(ctx, images, level);
-    prevStatus = 'playing'; prevDead = 0;
+    prevStatus = 'playing'; prevDead = 0; prevHopCount = 0;
     els.levelName.textContent = (idx + 1) + '. ' + level.name;
     els.hint.textContent = level.subtitle || '';
     [].forEach.call(els.levelSel.children, function (b) {
@@ -191,8 +191,9 @@
 
     var status = game.step(dt);
 
-    // SFX: portal suck + death splat.
+    // SFX: portal suck + death splat + a faint hop (once per frame at most).
     if (game.justSaved) { game.justSaved = false; SFX.suck(); }
+    if (game.hopCount > prevHopCount) { SFX.hop(); prevHopCount = game.hopCount; }
     var s = game.getState();
     if (s.dead > prevDead) { SFX.splat(); prevDead = s.dead; }
 

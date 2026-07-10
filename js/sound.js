@@ -71,6 +71,20 @@
     src.start(t); src.stop(t + dur);
   }
 
+  // A hopper hops: a very faint, soft blip. Kept quiet since it fires a lot.
+  var lastHop = -1;
+  function hop() {
+    if (!enabled || !ensure()) return;
+    var t = ctx.currentTime;
+    if (t - lastHop < 0.04) return; // throttle bursts
+    lastHop = t;
+    var osc = ctx.createOscillator(); osc.type = 'sine';
+    osc.frequency.setValueAtTime(420, t); osc.frequency.exponentialRampToValueAtTime(680, t + 0.06);
+    var g = ctx.createGain();
+    g.gain.setValueAtTime(0.06, t); g.gain.exponentialRampToValueAtTime(0.0006, t + 0.09);
+    osc.connect(g); g.connect(master); osc.start(t); osc.stop(t + 0.1);
+  }
+
   // Placing a tool: a soft wooden click.
   function place() {
     if (!enabled || !ensure()) return;
@@ -84,5 +98,5 @@
 
   function setEnabled(v) { enabled = v; }
 
-  root.HopperSFX = { resume: resume, suck: suck, splat: splat, place: place, setEnabled: setEnabled };
+  root.HopperSFX = { resume: resume, suck: suck, splat: splat, place: place, hop: hop, setEnabled: setEnabled };
 })(typeof self !== 'undefined' ? self : this);

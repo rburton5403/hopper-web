@@ -65,6 +65,7 @@
     this.score = 0;
     this.saved = 0;
     this.dead = 0;
+    this.hopCount = 0;
     this.pending = null;   // 'won' | 'lost' once decided; status commits after the outro
     this.outroT = 0;       // lose outro timer (lets the splat play)
     this.stallT = 0;       // deadlock timer: rises when nothing is moving/happening
@@ -168,6 +169,7 @@
 
   Game.prototype._hop = function (h) {
     var body = h.body, level = this.level, m = body.getMass();
+    this.hopCount++; // consumed by the UI to play a faint hop sound
     body.setLinearVelocity(this.pl.Vec2(0, 0));
     body.applyLinearImpulse(
       this.pl.Vec2(m * px2m(level.hopVelX * h.dir), m * px2m(-level.hopVelY)),
